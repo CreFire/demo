@@ -1,0 +1,13 @@
+POST http://localhost:8081/login
+Content-Type: application/json
+
+{
+  "name": "admin",
+  "pwd": 1
+}
+
+###
+POST http://localhost:8080/login
+Accept: application/json
+
+###
