@@ -3,7 +3,15 @@ package service
 import (
 	"flag"
 	"fmt"
+	"net"
+	http1 "net/http"
+	"os"
+	"os/signal"
+	"syscall"
+
 	endpoint "git.tmuyu.com.cn/demo/srv/login/pkg/endpoint"
+	grpc "git.tmuyu.com.cn/demo/srv/login/pkg/grpc"
+	pb "git.tmuyu.com.cn/demo/srv/login/pkg/grpc/pb"
 	http "git.tmuyu.com.cn/demo/srv/login/pkg/http"
 	service "git.tmuyu.com.cn/demo/srv/login/pkg/service"
 	endpoint1 "github.com/go-kit/kit/endpoint"
@@ -12,20 +20,14 @@ import (
 	group "github.com/oklog/oklog/pkg/group"
 	opentracinggo "github.com/opentracing/opentracing-go"
 	promhttp "github.com/prometheus/client_golang/prometheus/promhttp"
-	"net"
-	http1 "net/http"
-	"os"
-	"os/signal"
+	grpc1 "google.golang.org/grpc"
 	appdash "sourcegraph.com/sourcegraph/appdash"
 	opentracing "sourcegraph.com/sourcegraph/appdash/opentracing"
-	"syscall"
 )
 
 var tracer opentracinggo.Tracer
 var logger log.Logger
 
-// Define our flags. Your service probably won't need to bind listeners for
-// all* supported transports, but we do it here for demonstration purposes.
 var fs = flag.NewFlagSet("login", flag.ExitOnError)
 var debugAddr = fs.String("debug.addr", ":8080", "Debug and metrics listen address")
 var httpAddr = fs.String("http-addr", ":8081", "HTTP listen address")
@@ -44,13 +46,10 @@ func Run() {
 		return
 	}
 
-	// Create a single logger, which we'll use and give to other components.
 	logger = log.NewLogfmtLogger(os.Stderr)
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	logger = log.With(logger, "caller", log.DefaultCaller)
 
-	//  Determine which tracer to use. We'll pass the tracer to all the
-	// components that use it, as a dependency
 	if *lightstepToken != "" {
 		logger.Log("tracer", "LightStep")
 		tracer = lightsteptracergo.NewTracer(lightsteptracergo.Options{AccessToken: *lightstepToken})
@@ -78,7 +77,6 @@ func Run() {
 }
 func initHttpHandler(endpoints endpoint.Endpoints, g *group.Group) {
 	options := defaultHttpOptions(logger, tracer)
-	// Add your http options here
 
 	httpHandler := http.NewHTTPHandler(endpoints, options)
 	httpListener, err := net.Listen("tcp", *httpAddr)
@@ -95,13 +93,12 @@ func initHttpHandler(endpoints endpoint.Endpoints, g *group.Group) {
 }
 func getServiceMiddleware(logger log.Logger) (mw []service.Middleware) {
 	mw = []service.Middleware{}
-	// Append your middleware here
+
 	mw = append(mw)
 	return
 }
 func getEndpointMiddleware(logger log.Logger) (mw map[string][]endpoint1.Middleware) {
 	mw = map[string][]endpoint1.Middleware{}
-	// Add you endpoint middleware here
 
 	return
 }
@@ -132,4 +129,23 @@ func initCancelInterrupt(g *group.Group) {
 	}, func(error) {
 		close(cancelInterrupt)
 	})
+}
+
+func initGRPCHandler(endpoints endpoint.Endpoints, g *group.Group) {
+	options := defaultGRPCOptions(logger, tracer)
+
+	grpcServer := grpc.NewGRPCServer(endpoints, options)
+	grpcListener, err := net.Listen("tcp", *grpcAddr)
+	if err != nil {
+		logger.Log("transport", "gRPC", "during", "Listen", "err", err)
+	}
+	g.Add(func() error {
+		logger.Log("transport", "gRPC", "addr", *grpcAddr)
+		baseServer := grpc1.NewServer()
+		pb.RegisterLoginServer(baseServer, grpcServer)
+		return baseServer.Serve(grpcListener)
+	}, func(error) {
+		grpcListener.Close()
+	})
+
 }

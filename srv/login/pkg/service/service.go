@@ -21,10 +21,11 @@ func (b *basicLoginService) Login(ctx context.Context, name string, pwd string) 
 }
 
 func (b *basicLoginService) login(ctx context.Context, name string, pwd string) (token string, err error) {
-	if name == "admin" && pwd == "1" {
-		token = fmt.Sprintf("%v||%v\n", name, time.Now().Unix())
-	}
 	token = "failed"
+	if name == "admin" && pwd == "1" {
+		token = fmt.Sprintf("%v||%v", name, time.Now().Unix())
+		//token = string(bytes)
+	}
 	return token, err
 }
 
@@ -69,6 +70,6 @@ func (b *basicLoginService) refreshToken(ctx context.Context, oldToken string) (
 }
 
 func GetToken(name string) (token string) {
-	token = fmt.Sprintf("%v||%v\n", name, time.Now().Unix())
+	token = fmt.Sprintf("%v||%v", name, time.Now().Unix())
 	return
 }

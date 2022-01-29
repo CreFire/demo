@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package pb;
+
+
+option go_package = "/pb";
+
+//The Login service definition.
+service Login {
+ rpc Login  (LoginRequest       ) returns (LoginReply       );
+ rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenReply);
+}
+
+message LoginRequest {
+ string name = 1;
+ string pwd  = 2;
+}
+
+message LoginReply {
+ string token = 1;
+ string err   = 2;
+}
+
+message RefreshTokenRequest {
+ string old_token = 1;
+}
+
+message RefreshTokenReply {
+ string token = 1;
+}
+

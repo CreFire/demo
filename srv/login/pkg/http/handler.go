@@ -36,7 +36,7 @@ func encodeLoginResponse(ctx context.Context, w http.ResponseWriter, response in
 
 // makeRefreshTokenHandler creates the handler logic
 func makeRefreshTokenHandler(m *http.ServeMux, endpoints endpoint.Endpoints, options []http1.ServerOption) {
-	m.Handle("/refresh-token", http1.NewServer(endpoints.RefreshTokenEndpoint, decodeRefreshTokenRequest, encodeRefreshTokenResponse, options...))
+	m.Handle("/refreshToken", http1.NewServer(endpoints.RefreshTokenEndpoint, decodeRefreshTokenRequest, encodeRefreshTokenResponse, options...))
 }
 
 // decodeRefreshTokenRequest is a transport/http.DecodeRequestFunc that decodes a

@@ -3,11 +3,14 @@ Content-Type: application/json
 
 {
   "name": "admin",
-  "pwd": 1
+  "pwd": "1"
 }
 
 ###
-POST http://localhost:8080/login
-Accept: application/json
+POST http://localhost:8081/refreshToken
+Content-Type: application/json
 
+{
+  "old_token": "admin||1643445391"
+}
 ###
