@@ -32,6 +32,7 @@ var fs = flag.NewFlagSet("login", flag.ExitOnError)
 var debugAddr = fs.String("debug.addr", ":8080", "Debug and metrics listen address")
 var httpAddr = fs.String("http-addr", ":8081", "HTTP listen address")
 var grpcAddr = fs.String("grpc-addr", ":8082", "gRPC listen address")
+var socketAddr = fs.String("socketAddr", ":8084", "socket listen address")
 var thriftAddr = fs.String("thrift-addr", ":8083", "Thrift listen address")
 var thriftProtocol = fs.String("thrift-protocol", "binary", "binary, compact, json, simplejson")
 var thriftBuffer = fs.Int("thrift-buffer", 0, "0 for unbuffered")
@@ -147,5 +148,26 @@ func initGRPCHandler(endpoints endpoint.Endpoints, g *group.Group) {
 	}, func(error) {
 		grpcListener.Close()
 	})
+}
 
+func initSocketHandler(endpoints endpoint.Endpoints, g *group.Group) {
+
+	options := defaultGRPCOptions(logger, tracer)
+
+	grpcServer := grpc.NewGRPCServer(endpoints, options)
+	socketListener, err := net.Listen("tcp", *socketAddr)
+	if err != nil {
+		logger.Log("transport", "gRPC", "during", "Listen", "err", err)
+	}
+	g.Add(func() error {
+		logger.Log("transport", "gRPC", "addr", *grpcAddr)
+		baseServer := grpc1.NewServer()
+		pb.RegisterLoginServer(baseServer, grpcServer)
+		return baseServer.Serve(socketListener)
+	}, func(error) {
+		err := socketListener.Close()
+		if err != nil {
+			return
+		}
+	})
 }
