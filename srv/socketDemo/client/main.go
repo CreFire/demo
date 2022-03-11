@@ -1,47 +1,54 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"net"
 	"os"
-	"time"
 )
 
 func main() {
 	logrus.SetOutput(os.Stdout)
 	logrus.SetLevel(logrus.InfoLevel)
-	// 连接指定的端口
-	msg := ""
-	conn, err := net.DialTimeout("tcp", "127.0.0.1:8000", 2*time.Second)
+
+	tcpAddr, err := net.ResolveTCPAddr("tcp4", "127.0.0.1:8000")
+
 	if err != nil {
-		msg = fmt.Sprintf("Dial Error: %s", err)
-	} else {
-		msg = fmt.Sprintf("Connect to the server. (local address: %s)", conn.LocalAddr())
+		fmt.Println(os.Stderr, "Fatal error: ", err)
+		os.Exit(1)
 	}
-	var clientObj  = newClient(conn)
-	defer func() {
-		conn.Close()
-		clientObj = nil
-	}()
 
-	// 死循环，不断地读取数据，解析数据，发送数据
+	//建立服务器连接
+	conn, err := net.DialTCP("tcp", nil, tcpAddr)
+	if err != nil {
+		fmt.Println(conn.RemoteAddr().String(), os.Stderr, "Fatal error:", err)
+		os.Exit(1)
+	}
+	sender(conn)
+}
+
+func sender(conn *net.TCPConn) {
+
 	for {
-		// 先读取数据，每次读取1024个字节
-		readBytes := make([]byte, 1024)
-
-		// Read方法会阻塞，所以不用考虑异步的方式
-		n, err := conn.Read(readBytes)
+		inStr := reader()
+		msgBack, err := conn.Write([]byte(inStr)) //给服务器发信息
 		if err != nil {
-			logrus.Errorf(fmt.Sprintf("读取消息错误：%s，本次读取的字节数为：%d", err, n))
+			fmt.Println(conn.RemoteAddr().String(), "服务器反馈")
 			os.Exit(1)
 		}
+		buffer := make([]byte, 1024)
+		msg, err := conn.Read(buffer) //接受服务器信息
 
-		// 将读取到的数据追加到已获得的数据的末尾
-		clientObj.appendContent(readBytes[:n])
+		fmt.Println(conn.RemoteAddr().String(), "服务器反馈：", string(buffer[:msg]),string(buffer[:msg]))
+		fmt.Println(msgBack, "；实际发送了", len(inStr),inStr)
 
-		// 已经包含有效的数据，处理该数据
-		handleClient()
+		conn.Write([]byte("ok")) //在告诉服务器，它的反馈收到了。
 	}
 }
+
+func reader() string {
+	input := bufio.NewScanner(os.Stdin)
+	input.Scan()
+	return input.Text()
 }
