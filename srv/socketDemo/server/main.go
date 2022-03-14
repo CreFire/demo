@@ -40,7 +40,11 @@ func main() {
 		go handleConnection(conn)
 	}
 }
-
+//
+//  handleConnection
+//  @Description:
+//  @param conn
+//
 func handleConnection(conn net.Conn) {
 	buffer := make([]byte, 1024)
 	defer func(conn net.Conn) {
@@ -80,7 +84,13 @@ func handleConnection(conn net.Conn) {
 
 }
 
+//
+//  init
+//  @Description:
+//
+func init() {
 
+}
 func init(){
 	logrus.SetOutput(os.Stdout)
 	logrus.SetLevel(logrus.DebugLevel)
@@ -95,4 +105,5 @@ func init(){
 		//viper配置发生变化了 执行响应的操作
 		logrus.Errorf("Config file changed:%v \n", e.Name)
 	})
+
 }
